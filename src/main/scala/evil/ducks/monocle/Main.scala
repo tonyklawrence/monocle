@@ -1,6 +1,7 @@
 package evil.ducks.monocle
 
-import monocle.{PLens, Lens}
+import monocle.macros.GenLens
+import monocle.Lens
 
 case class Street(name: String)
 case class Address(number: Int, street: Street)
@@ -11,11 +12,12 @@ object MyLens {
   val _company = Lens[Employee, Company](_.company)(c => e => e.copy(company = c))
   val _address = Lens[Company, Address](_.address)(a => c => c.copy(address = a))
   val _street = Lens[Address, Street](_.street)(s => a => a.copy(street = s))
-  val _number = Lens[Address, Int](_.number)(n => a => a.copy(number = n))
+
+  import scala.language.higherKinds
+  val _number = GenLens[Address](_.number)
 
   val _companyAddress = _company composeLens _address
   val _companyStreet = _companyAddress ^|-> _street
-  val _companyNumber = _companyAddress ^|-> _number
 }
 
 object Main extends App {
@@ -35,6 +37,8 @@ object Main extends App {
   println(s"${tony.name}'s company is on ${_companyStreet.get(tony)}")
 
   println("Can we update something?")
-  val moveTo100 = _companyNumber.modify(_ => 100)
-  println(moveTo100(tony))
+  val bakerStreet = Address(101, Street("Baker Street"))
+
+  val moveTo = (address: Address) => _companyAddress.modify(_ => address)
+  println(moveTo(bakerStreet)(tony))
 }
